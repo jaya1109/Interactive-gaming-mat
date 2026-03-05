@@ -1,0 +1,96 @@
+// Serial Input Code for Interaction between Mat and Unity Game 
+using System.Collections; 
+using System.IO.Ports; 
+using UnityEngine; 
+public class SerialInput : MonoBehaviour 
+{ 
+SerialPort sp = new SerialPort("COM3", 115200); 
+public Transform cursor;                        
+public Transform pos1, pos2, pos3;                 
+void Start() 
+{ 
+try 
+{ 
+sp.Open(); 
+sp.ReadTimeout = 25; 
+Debug.Log("Serial Connected!"); 
+} 
+catch 
+{ 
+Debug.LogError("Could not open Serial Port. Check COM port!"); 
+} 
+} 
+void Update() 
+{ 
+if (sp.IsOpen) 
+{ 
+Try 
+{ 
+string value = sp.ReadLine().Trim(); 
+if (value == "TAP1") MoveCursor(pos1); 
+else if (value == "TAP2") MoveCursor(pos2); 
+else if (value == "TAP3") MoveCursor(pos3); 
+} 
+catch (System.Exception) 
+{ 
+} 
+} 
+} 
+void MoveCursor(Transform newPos) 
+{ 
+if (cursor != null && newPos != null) 
+{ 
+cursor.position = new Vector3(newPos.position.x, cursor.position.y, cursor.position.z); 
+Debug.Log($"Cursor moved to: {newPos.name}") 
+} 
+} 
+private void OnApplicationQuit() 
+{ 
+if (sp.IsOpen) 
+sp.Close(); 
+} 
+} 
+
+
+// Arduino Code for ESP32 Tap Function 
+const int zone1 = 34; 
+const int zone2 = 35; 
+const int zone3 = 32; 
+int val1, val2, val3; 
+int base1, base2, base3; 
+int threshold = 300; 
+bool tap1 = false, tap2 = false, tap3 = false; 
+void setup() { 
+Serial.begin(115200);
+delay(300); 
+Serial.println(" Magic Tiles Mat Calibrating..."); 
+long sum1 = 0, sum2 = 0, sum3 = 0; 
+for (int i = 0; i < 30; i++) { 
+sum1 += analogRead(zone1); 
+sum2 += analogRead(zone2); 
+sum3 += analogRead(zone3); 
+delay(20); 
+} 
+base1 = sum1 / 30; 
+base2 = sum2 / 30; 
+base3 = sum3 / 30; 
+Serial.print("Base Values: "); 
+Serial.print(base1); Serial.print(", "); 
+Serial.print(base2); Serial.print(", "); 
+Serial.println(base3); 
+Serial.println(" Ready to Play!"); 
+} 
+void loop() { 
+val1 = analogRead(zone1); 
+val2 = analogRead(zone2); 
+val3 = analogRead(zone3); 
+if (val1 > base1 + threshold && !tap1) { 
+Serial.println("TAP1"); 
+tap1 = true; 
+} 
+else if (val1 < base1 + threshold - 40) { 
+tap1 = false; 
+} 
+if (val2 > base2 + threshold && !tap2) { 
+Serial.println("TAP2"); 
+tap2 = true; 
